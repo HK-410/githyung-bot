@@ -6,7 +6,9 @@ settings:
 
 importers:
 
-  .:
+  .: {}
+
+  apps/githyung-bot:
     dependencies:
       groq-sdk:
         specifier: ^0.34.0
@@ -33,6 +35,8 @@ importers:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
+
+  packages/shared-utils: {}
 
 packages:
 
