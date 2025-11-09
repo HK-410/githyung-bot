@@ -1,66 +1,80 @@
 import Groq from 'groq-sdk';
-import { ChatCompletionCreateParamsNonStreaming } from 'groq-sdk/resources/chat/completions';
+
+// Use TypeScript's Parameters utility to robustly get the type for the create method's parameters
+type GroqCompletionCreateParams = Parameters<Groq['chat']['completions']['create']>[0];
 
 /**
  * A generic interface for the data structure expected from the LLM.
- * The calling application should define its own specific interface that extends this.
  */
 export interface LlmResponse {
   [key: string]: any;
 }
 
 /**
- * Generates a response from the Groq API using a provided model.
- * @param systemPrompt The system prompt defining the AI's role and rules.
- * @param userPrompt The user prompt containing the specific request.
- * @param model The LLM model to use for the generation.
- * @param responseFormat The desired response format (e.g., { type: 'json_object' } or { type: 'text' }).
- * @returns A promise that resolves to the parsed JSON object of type T if 'json_object' is requested, otherwise a string.
+ * A client for interacting with the Groq API.
  */
-export async function generateGroqResponse<T extends LlmResponse>(
-  systemPrompt: string, 
-  userPrompt: string,
-  model: string = 'openai/gpt-oss-120b',
-  responseFormat?: Groq.Chat.Completions.CompletionCreateParams.ResponseFormatText | Groq.Chat.Completions.CompletionCreateParams.ResponseFormatJsonSchema | Groq.Chat.Completions.CompletionCreateParams.ResponseFormatJsonObject | null | undefined
-): Promise<T | string> {
-  if (!process.env.GROQ_API_KEY) {
-    throw new Error('GROQ_API_KEY environment variable is not set.');
-  }
+export class GroqClient {
+  private groq: Groq;
 
-  console.log(`Generating content with Groq API using model: ${model}...`);
-  const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-
-  const completionParams: ChatCompletionCreateParamsNonStreaming = {
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPrompt },
-    ],
-    model: model,
-    temperature: 0.75,
-  };
-
-  if (responseFormat) {
-    completionParams.response_format = responseFormat;
-  }
-
-  const chatCompletion = await groq.chat.completions.create(completionParams);
-
-  const generatedContent = chatCompletion.choices[0]?.message?.content;
-
-  if (!generatedContent) {
-    throw new Error('Groq API did not return any content.');
-  }
-
-  if (responseFormat?.type === 'json_object' || responseFormat?.type === 'json_schema') {
-    try {
-      const parsedJson = JSON.parse(generatedContent);
-      return parsedJson as T;
-    } catch (e: any) {
-      console.error('Failed to parse LLM JSON response:', e.message);
-      console.error('Raw LLM output:', generatedContent);
-      throw new Error('LLM did not return a valid JSON object as requested.');
+  /**
+   * Creates an instance of GroqClient.
+   * @param apiKey The Groq API key.
+   */
+  constructor(apiKey: string) {
+    if (!apiKey) {
+      throw new Error('Groq API key is required.');
     }
+    this.groq = new Groq({ apiKey });
   }
 
-  return generatedContent;
+  /**
+   * Generates a response from the Groq API using a provided model.
+   * @param systemPrompt The system prompt defining the AI's role and rules.
+   * @param userPrompt The user prompt containing the specific request.
+   * @param model The LLM model to use for the generation.
+   * @param responseFormat The desired response format.
+   * @returns A promise that resolves to the parsed JSON object or a string.
+   */
+  async generateResponse<T extends LlmResponse>(
+    systemPrompt: string, 
+    userPrompt: string,
+    model: string = 'openai/gpt-oss-120b',
+    responseFormat?: GroqCompletionCreateParams['response_format']
+  ): Promise<T | string> {
+    console.log(`Generating content with Groq API using model: ${model}...`);
+
+    const completionParams: GroqCompletionCreateParams = {
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      model: model,
+      temperature: 0.75,
+      stream: false,
+    };
+
+    if (responseFormat) {
+      completionParams.response_format = responseFormat;
+    }
+
+    const chatCompletion = await this.groq.chat.completions.create(completionParams) as Groq.Chat.ChatCompletion;
+    const generatedContent = chatCompletion.choices[0]?.message?.content;
+
+    if (!generatedContent) {
+      throw new Error('Groq API did not return any content.');
+    }
+
+    if (responseFormat?.type === 'json_object' || responseFormat?.type === 'json_schema') {
+      try {
+        const parsedJson = JSON.parse(generatedContent);
+        return parsedJson as T;
+      } catch (e: any) {
+        console.error('Failed to parse LLM JSON response:', e.message);
+        console.error('Raw LLM output:', generatedContent);
+        throw new Error('LLM did not return a valid JSON object as requested.');
+      }
+    }
+
+    return generatedContent;
+  }
 }

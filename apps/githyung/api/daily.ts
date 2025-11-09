@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import KoreanLunarCalendar from 'korean-lunar-calendar';
-import { generateGroqResponse, postTweetThread, LlmResponse, calculateBytes } from '@hakyung/x-bot-toolkit';
+import { GroqClient, TwitterClient, LlmResponse } from '@hakyung/x-bot-toolkit';
 
 // Specific data structures for this bot
 interface LlmReply {
@@ -191,6 +191,16 @@ export default async function handler(
   console.log(`Starting daily run. DryRun: ${isDryRun}`);
 
   try {
+    // 1. Initialize Clients with environment variables
+    const groqClient = new GroqClient(process.env.GROQ_API_KEY as string);
+    const twitterClient = new TwitterClient({
+      appKey: process.env.X_APP_KEY as string,
+      appSecret: process.env.X_APP_SECRET as string,
+      accessToken: process.env.X_ACCESS_TOKEN as string,
+      accessSecret: process.env.X_ACCESS_SECRET as string,
+    });
+
+    // 2. Core Logic
     const kstTime = new Date().toLocaleString('en-US', { timeZone: 'Asia/Seoul' });
     const kstDate = new Date(kstTime);
     const calendar = new KoreanLunarCalendar();
@@ -217,7 +227,8 @@ Rank all 5 personas from 1st to 5th.
 Generate the complete JSON response strictly following the <Output Format>.
 Ensure the 'details' array is sorted by your rank (1st to 5th).`;
 
-    const llmResponse = await generateGroqResponse<LlmResponseData>(
+    // 3. Generate content using the Groq client instance
+    const llmResponse = await groqClient.generateResponse<LlmResponseData>(
       systemPrompt, 
       userPrompt,
       'openai/gpt-oss-120b',
@@ -232,21 +243,19 @@ Ensure the 'details' array is sorted by your rank (1st to 5th).`;
       }
     );
 
-    // Type guard to ensure we have an object, not a string.
     if (typeof llmResponse === 'string') {
       console.error('LLM returned a string instead of a JSON object:', llmResponse);
       throw new Error('Invalid response type from LLM. Expected a JSON object.');
     }
 
     const llmResponseData = llmResponse;
-
     const mainTweetContent = `${fullDateString} 오늘의 직무 운세 🔮\n\n${llmResponseData.mainTweetSummary}`;
-
     const finalReplies: FinalReply[] = llmResponseData.details.map((reply, index) => ({
       ...reply,
       rank: index + 1,
     }));
 
+    // 4. Post to Twitter or log for dry run
     if (!isDryRun) {
       console.log('--- [LIVE RUN] ---');
       const replyContents = finalReplies.map(reply => 
@@ -255,10 +264,10 @@ ${reply.explanation}
 
 🍀 행운의 아이템: ${reply.lucky_item}`
       );
-      await postTweetThread(mainTweetContent, replyContents);
+      await twitterClient.postThread(mainTweetContent, replyContents);
     } else {
       console.log('--- [DRY RUN] ---');
-      console.log(`[Main Tweet] (${calculateBytes(mainTweetContent)} bytes):\n${mainTweetContent}`);
+      console.log(`[Main Tweet] (${twitterClient.calculateBytes(mainTweetContent)} bytes):\n${mainTweetContent}`);
       console.log('---------------------------------');
       
       for (const reply of finalReplies) {
@@ -266,7 +275,7 @@ ${reply.explanation}
 ${reply.explanation}
 
 🍀 행운의 아이템: ${reply.lucky_item}`;
-        console.log(`[Reply ${reply.rank}] (${calculateBytes(replyContent)} bytes):\n${replyContent}`);
+        console.log(`[Reply ${reply.rank}] (${twitterClient.calculateBytes(replyContent)} bytes):\n${replyContent}`);
         console.log('---------------------------------');
       }
     }
