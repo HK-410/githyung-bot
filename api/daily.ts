@@ -230,7 +230,7 @@ Ensure the 'details' array is sorted by your rank (1st to 5th).`;
       throw new Error('LLM did not return valid JSON.');
     }
 
-    const mainTweetContent = `${fullDateString} 오늘의 IT 직무 운세 🔮\n\n${llmResponseData.mainTweetSummary}`;
+    const mainTweetContent = `${fullDateString} 오늘의 직무 운세 🔮\n\n${llmResponseData.mainTweetSummary}`;
 
 
     const sortedReplies = llmResponseData.details; 
