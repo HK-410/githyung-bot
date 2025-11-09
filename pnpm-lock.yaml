@@ -8,7 +8,7 @@ importers:
 
   .: {}
 
-  apps/githyung-bot:
+  apps/githyung:
     dependencies:
       '@hakyung/x-bot-toolkit':
         specifier: workspace:*
