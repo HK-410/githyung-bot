@@ -1,8 +1,12 @@
 {
   "name": "githyung",
   "version": "1.0.0",
+  "description": "A bot that tweets about daily fortune based on korean traditional way.",
   "private": true,
   "main": "api/daily.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
   "dependencies": {
     "@hakyung/x-bot-toolkit": "workspace:*",
     "korean-lunar-calendar": "^0.3.6"

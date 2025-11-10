@@ -2,6 +2,7 @@
   "name": "nanal",
   "version": "1.0.0",
   "description": "A bot that tweets about daily observances.",
+  "private": true,
   "main": "api/daily.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
