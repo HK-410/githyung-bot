@@ -1,8 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "cd ../.. && pnpm install",
+  "installCommand": "pwd && cd ../.. && pwd && pnpm install",
   "outputDirectory": "src",
-  "buildCommand": "cd ../.. && pnpm run build",
+  "buildCommand": "pwd && cd ../.. && pwd && pnpm run build",
   "crons": [
     {
       "path": "/api/daily",
