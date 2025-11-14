@@ -1,4 +1,4 @@
-import Groq from 'groq-sdk';
+import { Groq } from 'groq-sdk';
 
 // Use TypeScript's Parameters utility to robustly get the type for the create method's parameters
 type GroqCompletionCreateParams = Parameters<Groq['chat']['completions']['create']>[0];
@@ -7,7 +7,7 @@ type GroqCompletionCreateParams = Parameters<Groq['chat']['completions']['create
  * A generic interface for the data structure expected from the LLM.
  */
 export interface LlmResponse {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**
@@ -80,8 +80,9 @@ export class GroqClient {
         const parsedJson = JSON.parse(generatedContent);
         console.log(`[GroqClient-${callIdentifier}] Parsed JSON response.`);
         return parsedJson as T;
-      } catch (e: any) {
-        console.error(`[GroqClient-${callIdentifier}] Failed to parse LLM JSON response:`, e.message);
+      } catch (e: unknown) {
+        const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred during JSON parsing.';
+        console.error(`[GroqClient-${callIdentifier}] Failed to parse LLM JSON response:`, errorMessage);
         console.error(`[GroqClient-${callIdentifier}] Raw LLM output:`, generatedContent);
         throw new Error('LLM did not return a valid JSON object as requested.');
       }

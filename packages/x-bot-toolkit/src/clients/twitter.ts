@@ -1,5 +1,5 @@
 import { TwitterApi } from 'twitter-api-v2';
-import twitter from 'twitter-text';
+import { parseTweet } from 'twitter-text';
 
 const MAX_TWEET_BYTES = 280;
 
@@ -60,16 +60,16 @@ export class TwitterClient {
       const ellipsis = '...';
       const maxLength = MAX_TWEET_BYTES - this.calculateBytes(ellipsis);
       
-      let truncatedText = "";
+      let truncatedText = '';
       let currentLength = 0;
       const chars = Array.from(finalContent);
       for(const char of chars) {
-          const charWeight = this.calculateBytes(char);
-          if (currentLength + charWeight > maxLength) {
-              break;
-          }
-          truncatedText += char;
-          currentLength += charWeight;
+        const charWeight = this.calculateBytes(char);
+        if (currentLength + charWeight > maxLength) {
+          break;
+        }
+        truncatedText += char;
+        currentLength += charWeight;
       }
       finalContent = truncatedText + ellipsis;
       console.log(`[TwitterClient-${callIdentifier}]   Truncated Content (truncated): ${finalContent}`);
@@ -79,9 +79,10 @@ export class TwitterClient {
       const tweetResult = await this.client.v2.tweet(finalContent);
       console.log(`[TwitterClient-${callIdentifier}] Tweet posted: ${tweetResult.data.id}`);
       return tweetResult.data.id;
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred during JSON parsing.';
       console.error(`[TwitterClient-${callIdentifier}] Failed to post tweet:`, e);
-      throw new Error(`Failed to post tweet: ${e.message}`);
+      throw new Error(`Failed to post tweet: ${errorMessage}`);
     }
   }
 
@@ -102,9 +103,10 @@ export class TwitterClient {
       const mainTweetResult = await this.client.v2.tweet(mainTweetContent);
       mainTweetId = mainTweetResult.data.id;
       console.log(`[TwitterClient-${callIdentifier}] Main tweet posted: ${mainTweetId}`);
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred during JSON parsing.';
       console.error(`[TwitterClient-${callIdentifier}] Failed to post main tweet:`, e);
-      throw new Error(`Failed to post main tweet: ${e.message}`);
+      throw new Error(`Failed to post main tweet: ${errorMessage}`);
     }
 
     let lastTweetId = mainTweetId;
@@ -120,16 +122,16 @@ export class TwitterClient {
           const ellipsis = '...';
           const maxLength = MAX_TWEET_BYTES - this.calculateBytes(ellipsis);
           
-          let truncatedText = "";
+          let truncatedText = '';
           let currentLength = 0;
           const chars = Array.from(finalReplyContent);
           for(const char of chars) {
-              const charWeight = this.calculateBytes(char);
-              if (currentLength + charWeight > maxLength) {
-                  break;
-              }
-              truncatedText += char;
-              currentLength += charWeight;
+            const charWeight = this.calculateBytes(char);
+            if (currentLength + charWeight > maxLength) {
+              break;
+            }
+            truncatedText += char;
+            currentLength += charWeight;
           }
           finalReplyContent = truncatedText + ellipsis;
           console.log(`[TwitterClient-${callIdentifier}]   Truncated Reply Content (truncated): ${finalReplyContent}`);
@@ -143,8 +145,9 @@ export class TwitterClient {
         
         await new Promise(resolve => setTimeout(resolve, 1500));
 
-      } catch (e: any) {
-        console.error(`[TwitterClient-${callIdentifier}] Failed to post a reply:`, e);
+      } catch (e: unknown) {
+        const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred during JSON parsing.';
+        console.error(`[TwitterClient-${callIdentifier}] Failed to post a reply:`, errorMessage);
       }
     }
     console.log(`[TwitterClient-${callIdentifier}] --- Tweet thread posted successfully ---`);
@@ -156,6 +159,6 @@ export class TwitterClient {
    * @returns The weighted length.
    */
   calculateBytes(text: string): number {
-    return twitter.parseTweet(text).weightedLength;
+    return parseTweet(text).weightedLength;
   }
 }
